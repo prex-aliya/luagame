@@ -15,11 +15,11 @@ love .
 
 # Controls
 
-| KEYS | ACTIONS |
-|---|---|
-| w | move forward |
-| r/s | move backwards/use nitro |
-| h/left arrow | move left |
+| KEYS          | ACTIONS |
+|---------------|---|
+| w             | move forward |
+| r/s           | move backwards/use nitro |
+| h/left arrow  | move left |
 | l/right arrow | move right |
 
 
