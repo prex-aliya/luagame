@@ -1,13 +1,16 @@
-local QUIT = false
+local QUIT = false -- QUIT IF TRUE
 
 
 function love.load()
         arenaWidth = 800
         arenaHeight = 600
 
-        -- KEYBOARD KEYS
+        -- KEYBOARD KEYS {{{
         keys = {}
+
         keys.vim = true
+        keys.colemak = true
+
         if keys.vim then
                 keys.left       = {"h", "left"}
                 keys.right      = {"l", "right"}
@@ -15,14 +18,21 @@ function love.load()
                 keys.left       = "left"
                 keys.right      = "right"
         end
+        if keys.colemak then
+                keys.down       = {"r"}
+        else
+                keys.down       = {"s"}
+        end
+
+        keys.freeze     = {"space"}
         keys.up         = {"w"}
-        keys.down       = {"r", "s"}
         keys.exit = "q"
+        -- }}}
 
         player = {}
         player.x = arenaWidth / 2
         player.y = arenaHeight / 2
-        player.r = 15   -- player radius
+        player.r = 10   -- player radius
         player.a = 0    -- player angle
         player.turnSpeed = 10
         player.speedX = 10
@@ -32,9 +42,12 @@ function love.load()
         back.x = 0
         back.y = 0
 
-        move = true
+        move = true -- LET THE CHARACTER MOVE
+        freeze = false -- FREEZE WORLD BUT ROTATE
+        isfrozen = "false"
+
         debug = {}
-        debug.main = true
+        debug.main = false
         debug.vector = true
         debug.numbers = true
 
@@ -43,6 +56,10 @@ function love.load()
         down.main = true
         down.count = 0
         down.max = 3
+
+        frozen = {}
+        frozen.bool = true
+        frozen.time = 0
 
 
 
@@ -60,22 +77,22 @@ function love.load()
 
         TileTable = {
 
-                { 4,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,4 },
-                { 4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,1,4 },
-                { 4,1,3,1,1,1,1,1,1,1,1,1,1,1,1,3,1,1,1,1,1,1,1,1,4 },
-                { 4,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,4 },
+                { 4,4,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,4 },
+                { 4,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,1,4 },
                 { 4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4 },
-                { 4,1,1,4,1,1,1,1,1,2,2,1,1,4,1,1,1,4,1,4,2,2,1,1,4 },
-                { 4,1,1,4,1,1,1,1,4,3,3,4,1,2,1,1,1,2,1,4,1,1,1,1,4 },
-                { 4,1,1,4,1,1,1,1,4,3,3,4,1,1,4,1,4,1,1,4,2,2,1,1,4 },
-                { 4,1,1,4,1,1,1,1,4,3,3,4,1,1,2,1,2,1,1,4,1,1,1,1,4 },           
-                { 4,1,1,4,1,1,1,1,2,3,3,2,1,1,1,4,1,1,1,4,1,1,1,1,4 },
-                { 4,1,1,2,2,2,2,1,1,2,2,1,1,1,1,2,1,3,1,2,2,2,1,1,4 },
                 { 4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4 },
-                { 4,1,1,1,1,1,1,1,1,2,1,1,1,1,2,2,4,1,1,1,1,1,1,1,4 },
-                { 4,1,1,1,1,1,1,1,4,3,4,1,1,1,1,1,2,1,1,1,1,1,1,1,4 },
-                { 4,1,1,3,1,1,1,1,2,3,2,1,1,1,1,2,1,1,1,1,1,1,1,1,4 },
-                { 4,1,1,1,1,1,1,1,1,2,1,1,2,1,2,1,1,1,1,1,1,1,3,1,4 },
+                { 4,1,1,1,1,3,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4 },
+                { 4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4 },
+                { 4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4 },
+                { 4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4 },
+                { 4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,3,1,1,1,1,1,1,1,4 },           
+                { 4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4 },
+                { 4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4 },
+                { 4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4 },
+                { 4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4 },
+                { 4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4 },
+                { 4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4 },
+                { 4,1,1,1,1,1,1,1,3,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4 },
                 { 4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4 },
                 { 4,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,4 },
                 { 2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2 }
@@ -102,49 +119,83 @@ function love.update(dt)
                 love.timer.sleep(0.25)
         elseif not QUIT then -- IF QUIT MENU THEN STOP
                 if move then
-                        if love.keyboard.isDown(keys.down) and down.main == true then -- TURNS 180 DEGREES
-                                player.a = player.a + (math.pi)
-
-                                back.x = player.speedX + math.cos(player.a)
-                                back.y = player.speedY + math.sin(player.a)
-
-                                -- down.count = 0
-                                down.main = false
-                        elseif love.keyboard.isDown(keys.down) and down.count < down.max then
-                                -- CONTINUED PRESS ADDS VOLOCITY
-                                local shipSpeed2 = shipSpeed*2 -- Back wards is faster
-                                player.speedX = player.speedX + math.cos(player.a) * shipSpeed2 * dt
-                                player.speedY = player.speedY + math.sin(player.a) * shipSpeed2 * dt
-                                down.count = down.count + 1*dt
-                        elseif love.keyboard.isDown(keys.up) then -- ADD VELOCITY
-                                down.main = true
-
-                                player.speedX = player.speedX + math.cos(player.a) * shipSpeed * dt
-                                player.speedY = player.speedY + math.sin(player.a) * shipSpeed * dt
-                        end
 
                         if love.keyboard.isDown(keys.right) then
                                 player.a = player.a + player.turnSpeed * dt
                         elseif love.keyboard.isDown(keys.left) then
                                 player.a = player.a - player.turnSpeed * dt
                         end
+
+                        if love.keyboard.isDown('s') then -- TOGGLE FREEZE
+                                if freeze then
+                                        player.speedX = 0
+                                        player.speedY = 0
+
+                                        player.speedX = player.speedX + math.cos(player.a) * 400
+                                        player.speedY = player.speedY + math.sin(player.a) * 400
+
+                                        freeze = false
+                                        love.timer.sleep(10*dt)
+                                elseif frozen.bool then
+                                        freeze = true
+                                        love.timer.sleep(10*dt)
+
+                                        frozen.bool = false
+                                        frozen.time = 0
+                                end
+                        else
+                                if frozen.time < 1 and not freeze then
+                                        frozen.time = frozen.time + 3 * dt
+                                elseif not frozen.bool and not freeze then
+                                        player.speedX = player.speedX/3
+                                        player.speedY = player.speedY/3
+
+                                        frozen.bool = true
+                                end
+                        end
+
+                        if not freeze then
+                                if love.keyboard.isDown(keys.down) and down.main == true then -- TURNS 180 DEGREES
+                                        player.a = player.a + (math.pi)
+
+                                        back.x = player.speedX + math.cos(player.a)
+                                        back.y = player.speedY + math.sin(player.a)
+
+                                        -- down.count = 0
+                                        down.main = false
+                                elseif love.keyboard.isDown(keys.down) and down.count < down.max then -- NITRO
+                                        -- CONTINUED PRESS ADDS VOLOCITY
+                                        local shipSpeed2 = shipSpeed*5 -- Back wards is faster
+                                        player.speedX = player.speedX + math.cos(player.a) * shipSpeed2 * dt
+                                        player.speedY = player.speedY + math.sin(player.a) * shipSpeed2 * dt
+                                        down.count = down.count + 2*dt
+
+                                elseif love.keyboard.isDown(keys.up) then -- ADD VELOCITY
+                                        down.main = true
+
+                                        player.speedX = player.speedX + math.cos(player.a) * shipSpeed * dt
+                                        player.speedY = player.speedY + math.sin(player.a) * shipSpeed * dt
+                                end
+
+
+                                -- MOVEING
+                                if down.count > 0 then -- RENEWING NITRO
+                                        down.count = down.count - 0.3*dt
+                                end
+
+                                -- WRAPPING THE SHIP ANGLE
+                                if down == true then
+                                        player.a = player.a % (2 * math.pi)
+                                end
+
+                                player.x = player.x + player.speedX * dt
+                                player.y = player.y + player.speedY * dt
+
+                                -- WRAPPING SHIP
+                                player.x = (player.x + player.speedX * dt) % arenaWidth
+                                player.y = (player.y + player.speedY * dt) % arenaHeight
+                        end
                 end
-
-                if down.count > 0 then -- RENEWING NITRO
-                        down.count = down.count - 0.3*dt
-                end
-
-                -- WRAPPING THE SHIP ANGLE
-                if down == true then
-                        player.a = player.a % (2 * math.pi)
-                end
-
-                player.x = player.x + player.speedX * dt
-                player.y = player.y + player.speedY * dt
-
-                -- WRAPPING SHIP
-                player.x = (player.x + player.speedX * dt) % arenaWidth
-                player.y = (player.y + player.speedY * dt) % arenaHeight
         end
 end
 
@@ -208,6 +259,11 @@ function love.draw()
 
                 if debug.numbers then
                         -- NUMBERS
+                        isfrozen = "false"
+                        if freeze then
+                                isfrozen = "true"
+                        end
+
                         love.graphics.setColor(globalLight)
                         love.graphics.print(table.concat({
                                 'shipAngle: '..player.a,
@@ -216,7 +272,9 @@ function love.draw()
                                 'shipSpeedX: '..player.speedX,
                                 'shipSpeedY: '..player.speedY,
                                 'randomSeed: '..math.random(os.time()),
-                                'nitro: '..down.count
+                                'nitro: '..down.count,
+                                'freeze: '..isfrozen,
+                                'frozen: '..frozen.time
                         }, '\n'))
                 end
         end
